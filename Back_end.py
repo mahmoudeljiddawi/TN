@@ -25,6 +25,7 @@ test=[]
 hiddenLayers = 0
 Activation = ''
 Output_weights=[]
+Bias=[]
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
@@ -115,62 +116,51 @@ def Backprobagation_network(bias , epochs, learning_rate, hiddenL, neurons , mse
 
     Activation = activationFunction
     neuronList = neurons.split(',')
-    global weights , Output_weights , hiddenLayers
+    global weights , Output_weights , hiddenLayers , Bias , Forward , gradients
     hiddenLayers = hiddenL
-    weights = []
-    Forward = []
-    gradients = []
-
     for i in range(hiddenLayers):
         if i==0:
             weight = np.random.uniform(low=0.0, high=1.0, size=(int(neuronList[i]),4))
+            B = np.random.uniform(low= 0.0 , high=1.0 , size=(int(neuronList[i]) , 1))
+            Bias.append(B)
         else:
             weight = np.random.uniform(low=0.0, high=1.0, size=(int(neuronList[i]), int(neuronList[i-1])))
+            B = np.random.uniform(low=0.0, high=1.0, size=(int(neuronList[i]), 1))
+            Bias.append(B)
         weights.append(weight)
     Output_weights=np.random.uniform(low=0.0 , high=1.0 , size = (3 , int(neuronList[hiddenLayers-1])))
+    B = np.random.uniform(low=0.0, high=1.0, size=(3, 1))
+    Bias.append(B)
     Output_weights= np.array(Output_weights,  dtype=float)
+
     for e in range(epochs):
         for i in range(90):
             Input = np.array(X[i][0:4], dtype=float)
             Input = Input.reshape((4,1))
             Forward = []
             gradients = []
-            # print('input shape' , Input.shape)
-            #print('Input',Input , '\n' , 'shape' , Input.shape)
-            # #####  Forward ######
-
-            #print('weights' , weights , '\n' , 'shape' ,'cant print shape')
-            #print('Output Weight' , Output_weights , '\n' , 'shape' , Output_weights.shape)
 
             for j in range(hiddenLayers):
                 if j==0 :
-                    # print(type(Input).dtype , type(weights[j].dtype ))
-                    net = np.dot(weights[j] , Input)
+                    net = np.dot(weights[j] , Input) + Bias[j]
                 else:
-                    net = np.dot(weights[j] , Forward[j-1])
+                    net = np.dot(weights[j] , Forward[j-1]) + Bias[j]
                 if(activationFunction=='  Sigmoid'):
                     net_act = sigmoid(net)
                 else:
                     net_act = np.tanh(net)
                 Forward.append(net_act)
 
-            #print('Forward' , Forward , '\n' , 'shape' , 'cant :(')
 
-            Y_hat = np.dot(Output_weights, Forward[hiddenLayers-1])
-
-            #print('Y_hat' , Y_hat , '\n' , 'shape',Y_hat.shape)
+            Y_hat = np.dot(Output_weights, Forward[hiddenLayers-1]) + Bias[hiddenLayers]
 
             if (activationFunction == '  Sigmoid'):
                 Y_hat = sigmoid(Y_hat)
             else:
                 Y_hat = np.tanh(Y_hat)
-            #if i==0 or i==30 or i==60:
-            #    print('Y_hat after activation', Y_hat , '\n', 'shape' , Y_hat.shape)
-
                 #####   Backward  ######
             if i <30: #class1
                 gradient = (Y1 - Y_hat) * derivative_activation(Y_hat)
-                # print(gradient.shape, 'gradiennnnnnnnnnnt ')
                 gradients.append(gradient)
             elif i<60:
                 gradient = (Y2 - Y_hat) * derivative_activation(Y_hat)
@@ -180,54 +170,46 @@ def Backprobagation_network(bias , epochs, learning_rate, hiddenL, neurons , mse
                 gradients.append(gradient)
             for j in reversed(range(hiddenLayers)):
                 if j == hiddenLayers-1:
-                    # print('shapes0' , Output_weights.shape , gradients[0].shape)
                     gradient = derivative_activation(Forward[j])* np.dot(Output_weights.T,gradients[0])
                 else:
-                    # print('shapes' , weights[j+1].shape , gradients[hiddenLayers-j-1].shape)
                     gradient = derivative_activation(Forward[j])* np.dot(weights[j+1].T, gradients[hiddenLayers-j-1])
                 gradients.append(gradient)
-            #print('gradients' , gradients , '\n' , 'shape' ,' cant')
 
             ######  Update  ########
             for j in range(hiddenLayers):
                 if j==0:
-                    # print(gradients[hiddenLayers-j].shape,(Input.T).shape)
-                    weights[0]=weights[0]+(learning_rate* np.dot(gradients[hiddenLayers-j],Input.T))
+                    weights[0]=weights[0]+(learning_rate* gradients[hiddenLayers-j] *Input.T)
+                    Bias[0]=Bias[0]+(learning_rate* gradients[hiddenLayers-j])
                 else:
-                    # print('errorrr ',weights[j].shape  , 'hoohoh', np.dot(gradients[hiddenLayers-j],Forward[j-1].T).shape )
-                    # print(weights[j])
-                    # print('ok')
-                    weights[j]=weights[j]+(learning_rate* np.dot(gradients[hiddenLayers-j],Forward[j-1].T))
-            Output_weights = Output_weights + (learning_rate*np.dot(gradients[0], Forward[hiddenLayers-1].T))
-
-            #print('weights afte update', weights, '\n' , 'shape cant')
-            #print('Output Weight after update', Output_weights, '\n' , 'shape cant')
+                    weights[j]=weights[j]+(learning_rate* gradients[hiddenLayers-j]*Forward[j-1].T)
+                    Bias[j] = Bias[j] + (learning_rate * gradients[hiddenLayers - j])
+            Output_weights = Output_weights + (learning_rate*gradients[0]* Forward[hiddenLayers-1].T)
+            Bias[hiddenLayers]=Bias[hiddenLayers]+(learning_rate*gradients[0])
     Test()
 
 
 def Test():
-    global hiddenLayers , Activation , Output_weights
-    #print('weights',weights)
+    global hiddenLayers , Activation , Output_weights ,Bias , weights
+    Class1 = 0
+    Class2 = 0
+    Class3 = 0
     for i in range(60):
             Input = np.array(test[i], dtype=float)
             Input = Input.reshape((4, 1))
             Forward=[]
-     #       print('input' , Input)
             for j in range(hiddenLayers):
                 if j == 0:
-                    #print(type(Input).dtype, type(weights[j].dtype))
-                    net = np.dot(weights[j], Input)
+                    net = np.dot(weights[j], Input) + Bias[j]
                 else:
-                    net = np.dot(weights[j], Forward[j - 1])
+                    net = np.dot(weights[j], Forward[j - 1]) + Bias[j]
                 if (Activation == '  Sigmoid'):
                     net_act = sigmoid(net)
                 else:
                     net_act = np.tanh(net)
                 Forward.append(net_act)
 
-            #print('Forward Test', Forward, '\n')
 
-            Y_hat = np.dot(Output_weights, Forward[hiddenLayers - 1])
+            Y_hat = np.dot(Output_weights, Forward[hiddenLayers - 1]) + Bias[hiddenLayers]
 
             #print('Y_hat', Y_hat, '\n')
 
@@ -236,6 +218,30 @@ def Test():
             else:
                 Y_hat = np.tanh(Y_hat)
 
-            #if i<20:
-            print(Y_hat, i)
+
+            print(Y_hat,i)
+            if(max(Y_hat[0] , Y_hat[1] , Y_hat[2]) == Y_hat[0]):
+                #print('Class1' , i+1)
+                Class1+=1
+            if (max(Y_hat[0], Y_hat[1], Y_hat[2]) == Y_hat[1]):
+                #print('Class2', i+1)
+                Class2+=1
+            if (max(Y_hat[0], Y_hat[1], Y_hat[2]) == Y_hat[2]):
+                #print('Class3',i+1)
+                Class3+=1
+
+
+    error = 0
+    if(Class1<20):
+        error+= 20-Class1
+    if(Class2<20):
+        error+= 20-Class2
+    if(Class3<20):
+        error+= 20-Class3
+    print('Finished')
+    Accuracy = abs(60 - error)/60
+    Accuracy*=100
+
+    print(Class1,Class2,Class3)
+    print(Accuracy)
 
